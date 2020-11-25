@@ -56,6 +56,9 @@ features = [
 path = "../libsplinter"
 features = [
   "admin-service",
+  "biome-oauth",
+  "oauth",
+  "oauth-openid",
   "registry",
   "registry-remote",
   "rest-api",
@@ -64,7 +67,9 @@ features = [
 
 [features]
 default = [
+    "auth",
     "biome",
+    "biome-oauth",
     "biome-credentials",
     "biome-key-management",
 ]
