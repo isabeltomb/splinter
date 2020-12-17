@@ -33,6 +33,7 @@ mod unified;
 mod yaml;
 
 use std::collections::HashMap;
+use std::fmt;
 use std::iter::ExactSizeIterator;
 
 #[cfg(feature = "registry-database")]
@@ -147,6 +148,24 @@ impl NodeBuilder {
         check_node_required_fields_are_not_empty(&node)?;
 
         Ok(node)
+    }
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut display_string = format!("identity: {}\nendpoints:", self.identity);
+        for endpoint in &self.endpoints {
+            display_string += &format!("\n  - {}", endpoint);
+        }
+        display_string += &format!("\ndisplay name: {}\nkeys:", self.display_name);
+        for key in &self.keys {
+            display_string += &format!("\n  - {}", key);
+        }
+        display_string += "\nmetadata:";
+        for (key, value) in &self.metadata {
+            display_string += &format!("\n  {}: {}", key, value);
+        }
+        write!(f, "{}", display_string)
     }
 }
 
