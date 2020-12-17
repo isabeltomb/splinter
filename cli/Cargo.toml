@@ -71,6 +71,7 @@ experimental = [
     "circuit-auth-type",
     "health",
     "https-certs",
+    "registry",
     "splinter-cli-jwt",
 ]
 
@@ -78,6 +79,7 @@ circuit-auth-type = []
 circuit-template = ["splinter/circuit-template"]
 
 splinter-cli-jwt = ["cylinder/jwt", "cylinder/key-load"]
+registry = []
 
 health = []
 

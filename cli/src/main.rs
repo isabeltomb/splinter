@@ -883,10 +883,13 @@ fn run<I: IntoIterator<Item = T>, T: Into<OsString> + Clone>(args: I) -> Result<
 
     subcommands = subcommands.with_command("circuit", circuit_command);
 
-    subcommands = subcommands.with_command(
-        "registry",
-        SubcommandActions::new().with_command("build", registry::RegistryGenerateAction),
-    );
+    let registry_command =
+        SubcommandActions::new().with_command("build", registry::RegistryGenerateAction);
+
+    #[cfg(feature = "registry-add-node")]
+    let registry_command = registry_command.with_command("add", registry::RegistryAddAction);
+
+    subcommands = subcommands.with_command("registry", registry_command);
 
     #[cfg(feature = "health")]
     {
