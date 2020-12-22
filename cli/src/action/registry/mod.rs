@@ -12,17 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "registry-add-node")]
+#[cfg(feature = "registry")]
 mod api;
 
+#[cfg(feature = "registry")]
+use std::fmt;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
 use clap::ArgMatches;
 use splinter::registry::Node;
-#[cfg(feature = "registry-add-node")]
+#[cfg(feature = "registry")]
 use std::collections::HashMap;
+#[cfg(feature = "registry")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::CliError;
 
@@ -183,10 +187,10 @@ impl Action for RegistryGenerateAction {
     }
 }
 
-#[cfg(feature = "registry-add-node")]
+#[cfg(feature = "registry")]
 pub struct RegistryAddAction;
 
-#[cfg(feature = "registry-add-node")]
+#[cfg(feature = "registry")]
 impl Action for RegistryAddAction {
     fn run<'a>(&mut self, arg_matches: Option<&ArgMatches<'a>>) -> Result<(), CliError> {
         let args = arg_matches.ok_or(CliError::RequiresArgs)?;
@@ -218,80 +222,26 @@ impl Action for RegistryAddAction {
 
         let client = builder.build()?;
 
-        let metadata: Vec<(String, String)> = if let Some(metadata) = args.values_of("metadata") {
-            metadata
-                .map(|kv| {
-                    let mut kv_iter = kv.splitn(2, '=');
-
-                    let key = kv_iter
-                        .next()
-                        .expect("str::split cannot return an empty iterator")
-                        .to_string();
-                    if key.is_empty() {
-                        return Err(CliError::ActionError(
-                            "Empty '--metadata' argument detected".into(),
-                        ));
-                    }
-
-                    let value = kv_iter
-                        .next()
-                        .ok_or_else(|| {
-                            CliError::ActionError(format!(
-                                "Missing value for metadata key '{}'",
-                                key
-                            ))
-                        })?
-                        .to_string();
-                    if value.is_empty() {
-                        return Err(CliError::ActionError(format!(
-                            "Empty value detected for metadata key '{}'",
-                            key
-                        )));
-                    }
-
-                    Ok((key, value))
-                })
-                .collect::<Result<_, _>>()?
-        } else {
-            Default::default()
-        };
+        let mut node_metadata: HashMap<String, String> = HashMap::new();
+        if let Some(metadata) = args.values_of("metadata") {
+            for pair in metadata {
+                let (key, value) = parse_metadata(pair)?;
+                node_metadata.insert(key, value);
+            }
+        }
 
         if args.is_present("from_remote") {
             let remote_node = client.get_node(&identity)?.ok_or_else(|| {
                 CliError::ActionError("Unable to retrieve node from remote".into())
             })?;
-            let endpoints = match args.values_of("endpoint") {
-                Some(endpoints) => endpoints.map(String::from).collect::<Vec<String>>(),
-                None => remote_node.endpoints,
+
+            let node = RegistryNode {
+                identity: remote_node.identity,
+                endpoints: remote_node.endpoints,
+                display_name: remote_node.display_name,
+                keys: remote_node.keys,
+                metadata: remote_node.metadata,
             };
-            let keys = match args.values_of("key") {
-                Some(keys) => keys
-                    .map(|key_file| read_private_key(key_file))
-                    .collect::<Result<_, _>>()?,
-                None => remote_node.keys,
-            };
-
-            let mut node_metadata: HashMap<String, String> = HashMap::new();
-            if args.is_present("metadata") {
-                for (key, value) in metadata.iter() {
-                    node_metadata.insert(key.to_string(), value.to_string());
-                }
-            } else {
-                node_metadata = remote_node.metadata;
-            }
-
-            let mut node_builder = Node::builder(identity)
-                .with_endpoints(endpoints)
-                .with_display_name(display_name)
-                .with_keys(keys);
-
-            for (key, value) in node_metadata {
-                node_builder = node_builder.with_metadata(key, value);
-            }
-
-            let node = node_builder
-                .build()
-                .map_err(|err| CliError::ActionError(format!("Unable to build node: {}", err)))?;
 
             if !args.is_present("dry_run") {
                 client.update_node(&node)?;
@@ -317,18 +267,13 @@ impl Action for RegistryAddAction {
                 .map(|key_file| read_private_key(key_file))
                 .collect::<Result<_, _>>()?;
 
-            let mut node_builder = Node::builder(identity)
-                .with_endpoints(endpoints)
-                .with_display_name(display_name)
-                .with_keys(keys);
-
-            for (key, value) in metadata.iter() {
-                node_builder = node_builder.with_metadata(key, value);
-            }
-
-            let node = node_builder
-                .build()
-                .map_err(|err| CliError::ActionError(format!("Unable to build node: {}", err)))?;
+            let node = RegistryNode {
+                identity,
+                endpoints,
+                display_name,
+                keys,
+                metadata: node_metadata,
+            };
 
             if !args.is_present("dry_run") {
                 client.add_node(&node)?
@@ -338,5 +283,63 @@ impl Action for RegistryAddAction {
 
             Ok(())
         }
+    }
+}
+
+fn parse_metadata(metadata: &str) -> Result<(String, String), CliError> {
+    let mut key_value_iter = metadata.split('=');
+
+    let key = key_value_iter
+        .next()
+        .expect("str::split cannot return an empty iterator")
+        .to_string();
+    if key.is_empty() {
+        return Err(CliError::ActionError(
+            "Empty '--metadata' argument detected".into(),
+        ));
+    }
+
+    let value = key_value_iter.next().ok_or_else(|| {
+        CliError::ActionError(format!(
+            "Missing value for metadata key '{}'",
+            key,
+        ))
+    })?.to_string();
+    if value.is_empty() {
+        return Err(CliError::ActionError(format!(
+            "Empty value detected for metadata key '{}'",
+            key,
+        )));
+    }
+
+    Ok((key, value))
+}
+
+#[cfg(feature = "registry")]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RegistryNode {
+    pub identity: String,
+    pub endpoints: Vec<String>,
+    pub display_name: String,
+    pub keys: Vec<String>,
+    pub metadata: HashMap<String, String>,
+}
+
+#[cfg(feature = "registry")]
+impl fmt::Display for RegistryNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut display_string = format!("identity: {}\nendpoints:", self.identity);
+        for endpoint in &self.endpoints {
+            display_string += &format!("\n  - {}", endpoint);
+        }
+        display_string += &format!("\ndisplay name: {}\nkeys:", self.display_name);
+        for key in &self.keys {
+            display_string += &format!("\n  - {}", key);
+        }
+        display_string += "\nmetadata:";
+        for (key, value) in &self.metadata {
+            display_string += &format!("\n  {}: {}", key, value);
+        }
+        write!(f, "{}", display_string)
     }
 }

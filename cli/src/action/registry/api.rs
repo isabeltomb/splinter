@@ -14,15 +14,15 @@
 
 use reqwest::blocking::Client;
 use serde::Deserialize;
-use splinter::registry::Node;
 use std::collections::HashMap;
 
 use crate::action::api::{ServerError, SplinterRestClient};
 use crate::error::CliError;
+use crate::registry::RegistryNode;
 
 impl SplinterRestClient {
     /// Adds a new node to the registry.
-    pub fn add_node(&self, node: &Node) -> Result<(), CliError> {
+    pub fn add_node(&self, node: &RegistryNode) -> Result<(), CliError> {
         // Allowing unused_mut because request must be mutable if experimental feature
         // splinter-cli-jwt is enabled, if feature is removed unused_mut notation can be removed
         #[allow(unused_mut)]
@@ -62,7 +62,7 @@ impl SplinterRestClient {
     }
 
     /// Updates the node with the same identity in the registry.
-    pub fn update_node(&self, node: &Node) -> Result<(), CliError> {
+    pub fn update_node(&self, node: &RegistryNode) -> Result<(), CliError> {
         // Allowing unused_mut because request must be mutable if experimental feature
         // splinter-cli-jwt is enabled, if feature is removed unused_mut notation can be removed
         #[allow(unused_mut)]
@@ -147,7 +147,7 @@ impl SplinterRestClient {
 pub struct NodeResponse {
     pub identity: String,
     pub endpoints: Vec<String>,
-    pub display_name: Option<String>,
+    pub display_name: String,
     pub keys: Vec<String>,
     pub metadata: HashMap<String, String>,
 }

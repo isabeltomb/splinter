@@ -704,13 +704,13 @@ fn run<I: IntoIterator<Item = T>, T: Into<OsString> + Clone>(args: I) -> Result<
                 ),
         );
 
-    #[cfg(feature = "registry-add-node")]
+    #[cfg(feature = "registry")]
     let registry_command = registry_command.subcommand(
         SubCommand::with_name("add")
             .about("Add a node to the local registry")
             .arg(
                 Arg::with_name("display_name")
-                    .long("display")
+                    .long("display-name")
                     .takes_value(true)
                     .help("Human-readable name for the new node"),
             )
@@ -758,7 +758,7 @@ fn run<I: IntoIterator<Item = T>, T: Into<OsString> + Clone>(args: I) -> Result<
                     .short("k")
                     .long("key")
                     .takes_value(true)
-                    .help("Name or path of private key"),
+                    .help("Name or path of private key to be used for REST API authorization"),
             )
             .arg(
                 Arg::with_name("url")
@@ -886,7 +886,7 @@ fn run<I: IntoIterator<Item = T>, T: Into<OsString> + Clone>(args: I) -> Result<
     let registry_command =
         SubcommandActions::new().with_command("build", registry::RegistryGenerateAction);
 
-    #[cfg(feature = "registry-add-node")]
+    #[cfg(feature = "registry")]
     let registry_command = registry_command.with_command("add", registry::RegistryAddAction);
 
     subcommands = subcommands.with_command("registry", registry_command);
