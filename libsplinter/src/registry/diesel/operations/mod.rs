@@ -19,6 +19,8 @@ pub(super) mod delete_node;
 pub(super) mod fetch_node;
 pub(super) mod has_node;
 pub(super) mod insert_node;
+pub(super) mod add_node;
+pub(super) mod update_node;
 pub(super) mod list_nodes;
 
 use diesel::{

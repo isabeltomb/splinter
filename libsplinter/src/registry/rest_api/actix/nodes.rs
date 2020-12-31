@@ -215,7 +215,7 @@ fn add_node(
                                 InvalidNodeError::DuplicateIdentity(node.identity),
                             ))
                         } else {
-                            registry.insert_node(node)
+                            registry.add_node(node)
                         }
                     })
                     .then(|res| {
@@ -575,6 +575,28 @@ mod tests {
                 .expect("mem registry lock was poisoned")
                 .insert(node.identity.clone(), node);
             Ok(())
+        }
+
+        fn add_node(&self, node: Node) -> Result<(), RegistryError> {
+            let mut inner = self
+                .nodes
+                .lock()
+                .map_err(|err| RegistryError::general_error_with_source("Cannot access node registry: mutex lock poisoned", err))?;
+            inner.insert(node.identity.clone(), node);
+            Ok(())
+        }
+
+        fn update_node(&self, node: Node) -> Result<(), RegistryError> {
+            let mut inner = self
+                .nodes
+                .lock()
+                .map_err(|err| RegistryError::general_error_with_source("Cannot access node registry: mutex lock poisoned", err))?;
+            if inner.contains_key(&node.identity) {
+                inner.insert(node.identity.clone(), node);
+                Ok(())
+            } else {
+                Err(RegistryError::InvalidNode(InvalidNodeError::InvalidIdentity(node.identity, "Node does not exist in the registry".to_string())))
+            }
         }
 
         fn delete_node(&self, identity: &str) -> Result<Option<Node>, RegistryError> {

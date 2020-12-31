@@ -28,7 +28,7 @@ use std::time::SystemTime;
 
 use crate::registry::{
     validate_nodes, MetadataPredicate, Node, NodeIter, RegistryError, RegistryReader,
-    RegistryWriter, RwRegistry,
+    RegistryWriter, RwRegistry, InvalidNodeError,
 };
 
 /// A local, read/write registry.
@@ -126,6 +126,23 @@ impl RegistryWriter for LocalYamlRegistry {
         nodes.retain(|existing_node| existing_node.identity != node.identity);
         nodes.push(node);
         self.write_nodes(nodes)
+    }
+
+    fn add_node(&self, node: Node) -> Result<(), RegistryError> {
+        let mut nodes = self.get_nodes()?;
+        nodes.push(node);
+        self.write_nodes(nodes)
+    }
+
+    fn update_node(&self, node: Node) -> Result<(), RegistryError> {
+        let mut nodes = self.get_nodes()?;
+        if nodes.iter().any(|n| n.identity == node.identity) {
+            nodes.retain(|existing_node| existing_node.identity != node.identity);
+            nodes.push(node);
+            self.write_nodes(nodes)
+        } else {
+            Err(RegistryError::InvalidNode(InvalidNodeError::InvalidIdentity(node.identity, "Node does not exist in the registry".to_string())))
+        }
     }
 
     fn delete_node(&self, identity: &str) -> Result<Option<Node>, RegistryError> {

@@ -244,7 +244,7 @@ impl Action for RegistryAddAction {
             };
 
             if !args.is_present("dry_run") {
-                client.update_node(&node)?;
+                client.add_node(&node)?;
             }
 
             info!("{}", node);

@@ -204,6 +204,14 @@ impl RegistryWriter for UnifiedRegistry {
         self.internal_source.insert_node(node)
     }
 
+    fn add_node(&self, node: Node) -> Result<(), RegistryError> {
+        self.internal_source.add_node(node)
+    }
+
+    fn update_node(&self, node: Node) -> Result<(), RegistryError> {
+        self.internal_source.update_node(node)
+    }
+
     fn delete_node(&self, identity: &str) -> Result<Option<Node>, RegistryError> {
         self.internal_source.delete_node(identity)
     }
@@ -706,6 +714,28 @@ mod test {
                 .expect("mem registry lock was poisoned")
                 .insert(node.identity.clone(), node);
             Ok(())
+        }
+
+        fn add_node(&self, node: Node) -> Result<(), RegistryError> {
+            let mut inner = self
+                .nodes
+                .lock()
+                .map_err(|err| RegistryError::general_error_with_source("Cannot access node registry: mutex lock poisoned", err))?;
+            inner.insert(node.identity.clone(), node);
+            Ok(())
+        }
+
+        fn update_node(&self, node: Node) -> Result<(), RegistryError> {
+            let mut inner = self
+                .nodes
+                .lock()
+                .map_err(|err| RegistryError::general_error_with_source("Cannot access node registry: mutex lock poisoned", err))?;
+            if inner.contains_key(&node.identity) {
+                inner.insert(node.identity.clone(), node);
+                Ok(())
+            } else {
+                Err(RegistryError::InvalidNode(InvalidNodeError::InvalidIdentity(node.identity, "Node does not exist in the registry".to_string())))
+            }
         }
 
         fn delete_node(&self, identity: &str) -> Result<Option<Node>, RegistryError> {

@@ -35,6 +35,8 @@ use operations::delete_node::RegistryDeleteNodeOperation as _;
 use operations::fetch_node::RegistryFetchNodeOperation as _;
 use operations::has_node::RegistryHasNodeOperation as _;
 use operations::insert_node::RegistryInsertNodeOperation as _;
+use operations::add_node::RegistryAddNodeOperation as _;
+use operations::update_node::RegistryUpdateNodeOperation as _;
 use operations::list_nodes::RegistryListNodesOperation as _;
 use operations::RegistryOperations;
 
@@ -106,6 +108,14 @@ impl RegistryWriter for DieselRegistry<diesel::pg::PgConnection> {
         RegistryOperations::new(&*self.connection_pool.get()?).insert_node(node)
     }
 
+    fn add_node(&self, node: Node) -> Result<(), RegistryError> {
+        RegistryOperations::new(&*self.connection_pool.get()?).add_node(node)
+    }
+
+    fn update_node(&self, node: Node) -> Result<(), RegistryError> {
+        RegistryOperations::new(&*self.connection_pool.get()?).update_node(node)
+    }
+
     fn delete_node(&self, identity: &str) -> Result<Option<Node>, RegistryError> {
         RegistryOperations::new(&*self.connection_pool.get()?).delete_node(identity)
     }
@@ -115,6 +125,14 @@ impl RegistryWriter for DieselRegistry<diesel::pg::PgConnection> {
 impl RegistryWriter for DieselRegistry<diesel::sqlite::SqliteConnection> {
     fn insert_node(&self, node: Node) -> Result<(), RegistryError> {
         RegistryOperations::new(&*self.connection_pool.get()?).insert_node(node)
+    }
+
+    fn add_node(&self, node: Node) -> Result<(), RegistryError> {
+        RegistryOperations::new(&*self.connection_pool.get()?).add_node(node)
+    }
+
+    fn update_node(&self, node: Node) -> Result<(), RegistryError> {
+        RegistryOperations::new(&*self.connection_pool.get()?).update_node(node)
     }
 
     fn delete_node(&self, identity: &str) -> Result<Option<Node>, RegistryError> {
