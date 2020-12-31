@@ -286,33 +286,17 @@ impl Action for RegistryAddAction {
     }
 }
 
+#[cfg(feature = "registry")]
 fn parse_metadata(metadata: &str) -> Result<(String, String), CliError> {
-    let mut key_value_iter = metadata.split('=');
-
-    let key = key_value_iter
-        .next()
-        .expect("str::split cannot return an empty iterator")
-        .to_string();
-    if key.is_empty() {
-        return Err(CliError::ActionError(
-            "Empty '--metadata' argument detected".into(),
-        ));
+    let mut parts = metadata.splitn(2, ':');
+    match (parts.next(), parts.next()) {
+        (Some(key), Some(value)) => match key {
+            "" => Err(CliError::ActionError("Empty '--metadata' argument detected".into())),
+            _ => Ok((key.to_string(), value.to_string())),
+        },
+        (Some(key), None) => Err(CliError::ActionError(format!("Missing value for metadata key '{}'", key))),
+        _ => unreachable!(), // splitn always returns at least one item
     }
-
-    let value = key_value_iter.next().ok_or_else(|| {
-        CliError::ActionError(format!(
-            "Missing value for metadata key '{}'",
-            key,
-        ))
-    })?.to_string();
-    if value.is_empty() {
-        return Err(CliError::ActionError(format!(
-            "Empty value detected for metadata key '{}'",
-            key,
-        )));
-    }
-
-    Ok((key, value))
 }
 
 #[cfg(feature = "registry")]

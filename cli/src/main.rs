@@ -750,7 +750,7 @@ fn run<I: IntoIterator<Item = T>, T: Into<OsString> + Clone>(args: I) -> Result<
                     .long("metadata")
                     .takes_value(true)
                     .multiple(true)
-                    .help("Metadata to include with node (<key>=<value>)"),
+                    .help("Metadata to include with node (<key>:<value>)"),
             )
             .arg(
                 Arg::with_name("private_key_file")
