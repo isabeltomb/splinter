@@ -16,6 +16,8 @@
 
 mod builder;
 mod error;
+#[cfg(feature = "biome-profile")]
+mod profile;
 #[cfg(feature = "rest-api")]
 pub mod rest_api;
 pub mod store;
@@ -39,6 +41,12 @@ pub use builder::OAuthClientBuilder;
 #[cfg(feature = "oauth-openid")]
 pub use builder::OpenIdOAuthClientBuilder;
 pub use error::OAuthClientBuildError;
+#[cfg(all(feature = "biome-profile", feature = "oauth-github"))]
+pub use profile::GithubProfileProvider;
+#[cfg(all(feature = "biome-profile", feature = "oauth-openid"))]
+pub use profile::OpenIdProfileProvider;
+#[cfg(feature = "biome-profile")]
+pub use profile::ProfileProvider;
 #[cfg(feature = "oauth-github")]
 pub use subject::GithubSubjectProvider;
 #[cfg(feature = "oauth-openid")]
@@ -63,6 +71,10 @@ pub struct OAuthClient {
     /// Store for pending authorization requests, including the CSRF token, PKCE verifier, and
     /// client's redirect URL
     inflight_request_store: Box<dyn InflightOAuthRequestStore>,
+
+    /// OAuth2 profile provider used to retrieve user's profile details
+    #[cfg(feature = "biome-profile")]
+    profile_provider: Box<dyn ProfileProvider>,
 }
 
 impl OAuthClient {
@@ -87,6 +99,7 @@ impl OAuthClient {
         scopes: Vec<String>,
         subject_provider: Box<dyn SubjectProvider>,
         inflight_request_store: Box<dyn InflightOAuthRequestStore>,
+        #[cfg(feature = "biome-profile")] profile_provider: Box<dyn ProfileProvider>,
     ) -> Result<Self, InvalidArgumentError> {
         Ok(Self {
             client,
@@ -94,6 +107,8 @@ impl OAuthClient {
             scopes,
             subject_provider,
             inflight_request_store,
+            #[cfg(feature = "biome-profile")]
+            profile_provider,
         })
     }
 
@@ -317,6 +332,10 @@ mod tests {
     fn client_construction() {
         let subject_box: Box<dyn SubjectProvider> = Box::new(TestSubjectProvider);
         let inflight_request_store = Box::new(TestInflightOAuthRequestStore);
+
+        #[cfg(feature = "biome-profile")]
+        let profile_box: Box<dyn ProfileProvider> = Box::new(TestProfileProvider);
+
         OAuthClient::new(
             new_basic_client(
                 "client_id".into(),
@@ -330,6 +349,8 @@ mod tests {
             vec![],
             subject_box.clone_box(),
             inflight_request_store.clone_box(),
+            #[cfg(feature = "biome-profile")]
+            profile_box.clone_box(),
         )
         .expect("Failed to create client from valid inputs");
 
@@ -393,6 +414,8 @@ mod tests {
             vec![SCOPE1.into(), SCOPE2.into()],
             Box::new(TestSubjectProvider),
             request_store.clone(),
+            #[cfg(feature = "biome-profile")]
+            Box::new(TestProfileProvider),
         )
         .expect("Failed to create client");
 
@@ -472,6 +495,28 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "biome-profile")]
+    #[derive(Clone)]
+    pub struct TestProfileProvider;
+
+    #[cfg(feature = "biome-profile")]
+    impl ProfileProvider for TestProfileProvider {
+        fn get_profile(&self, _: &str) -> Result<Option<Profile>, InternalError> {
+            Ok(Some(Profile {
+                user_id: "".to_string(),
+                name: None,
+                given_name: None,
+                family_name: None,
+                email: None,
+                picture: None,
+            }))
+        }
+
+        fn clone_box(&self) -> Box<dyn ProfileProvider> {
+            Box::new(self.clone())
+        }
+    }
+
     #[derive(Clone)]
     pub struct TestInflightOAuthRequestStore;
 
@@ -512,6 +557,8 @@ mod actix_tests {
 
     use crate::oauth::store::MemoryInflightOAuthRequestStore;
 
+    #[cfg(feature = "biome-profile")]
+    use super::tests::TestProfileProvider;
     use super::tests::TestSubjectProvider;
 
     const CLIENT_ID: &str = "client_id";
@@ -569,6 +616,8 @@ mod actix_tests {
             vec![],
             Box::new(TestSubjectProvider),
             request_store.clone(),
+            #[cfg(feature = "biome-profile")]
+            Box::new(TestProfileProvider),
         )
         .expect("Failed to create client");
 
@@ -626,6 +675,8 @@ mod actix_tests {
             vec![],
             Box::new(TestSubjectProvider),
             Box::new(MemoryInflightOAuthRequestStore::new()),
+            #[cfg(feature = "biome-profile")]
+            Box::new(TestProfileProvider),
         )
         .expect("Failed to create client");
 

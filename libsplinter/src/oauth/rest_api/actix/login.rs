@@ -148,6 +148,8 @@ mod tests {
 
     use reqwest::{blocking::Client, redirect, StatusCode, Url};
 
+    #[cfg(feature = "biome-profile")]
+    use crate::oauth::tests::TestProfileProvider;
     use crate::oauth::{
         new_basic_client,
         store::{
@@ -194,6 +196,8 @@ mod tests {
             vec![],
             Box::new(TestSubjectProvider),
             Box::new(TestInflightOAuthRequestStore),
+            #[cfg(feature = "biome-profile")]
+            Box::new(TestProfileProvider),
         )
         .expect("Failed to create client");
 
@@ -258,6 +262,8 @@ mod tests {
             vec![],
             Box::new(TestSubjectProvider),
             Box::new(TestInflightOAuthRequestStore),
+            #[cfg(feature = "biome-profile")]
+            Box::new(TestProfileProvider),
         )
         .expect("Failed to create client");
 
@@ -316,6 +322,8 @@ mod tests {
             vec![],
             Box::new(TestSubjectProvider),
             Box::new(MemoryInflightOAuthRequestStore::new()),
+            #[cfg(feature = "biome-profile")]
+            Box::new(TestProfileProvider),
         )
         .expect("Failed to create client");
 

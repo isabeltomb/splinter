@@ -20,6 +20,9 @@ use crate::oauth::{
     OAuthClient, OpenIdSubjectProvider,
 };
 
+#[cfg(feature = "biome-profile")]
+use crate::oauth::OpenIdProfileProvider;
+
 /// The scope required to get a refresh token from an Azure provider.
 const AZURE_SCOPE: &str = "offline_access";
 /// The scopes required to get OpenID user information.
@@ -145,12 +148,25 @@ impl OpenIdOAuthClientBuilder {
 
         let userinfo_endpoint = discovery_document_response.userinfo_endpoint;
 
-        self.inner
+        // Allowing unused_mut because inner must be mutable if experimental feature
+        // biome-profile is enabled, if feature is removed unused_mut notation can be removed
+        #[allow(unused_mut)]
+        let mut inner = self
+            .inner
             .with_auth_url(discovery_document_response.authorization_endpoint)
             .with_token_url(discovery_document_response.token_endpoint)
             .with_scopes(DEFAULT_SCOPES.iter().map(ToString::to_string).collect())
-            .with_subject_provider(Box::new(OpenIdSubjectProvider::new(userinfo_endpoint)))
-            .build()
+            .with_subject_provider(Box::new(OpenIdSubjectProvider::new(
+                userinfo_endpoint.clone(),
+            )));
+
+        #[cfg(feature = "biome-profile")]
+        {
+            inner = inner
+                .with_profile_provider(Box::new(OpenIdProfileProvider::new(userinfo_endpoint)));
+        }
+
+        inner.build()
     }
 }
 
