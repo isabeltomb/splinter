@@ -81,3 +81,6 @@ pub(crate) const BIOME_VERIFY_PROTOCOL_MIN: u32 = 1;
 
 #[cfg(all(feature = "biome-key-management", feature = "rest-api",))]
 pub(crate) const BIOME_KEYS_PROTOCOL_MIN: u32 = 1;
+
+#[cfg(all(feature = "biome-profile", feature = "rest-api",))]
+pub(crate) const BIOME_PROFILE_PROTOCOL_MIN: u32 = 1;
