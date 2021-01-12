@@ -20,6 +20,8 @@ use cylinder::Verifier;
 use crate::biome::rest_api::BiomeRestResourceManager;
 #[cfg(feature = "oauth")]
 use crate::biome::OAuthUserSessionStore;
+#[cfg(feature = "biome-profile")]
+use crate::biome::UserProfileStore;
 #[cfg(feature = "auth")]
 use crate::rest_api::auth::identity::IdentityProvider;
 #[cfg(feature = "oauth")]
@@ -51,6 +53,9 @@ pub enum AuthConfig {
         oauth_config: OAuthConfig,
         /// The Biome OAuth user session store
         oauth_user_session_store: Box<dyn OAuthUserSessionStore>,
+        /// The Biome user profile store
+        #[cfg(feature = "biome-profile")]
+        user_profile_store: Box<dyn UserProfileStore>,
     },
     /// A custom authentication method
     Custom {
